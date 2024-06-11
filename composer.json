@@ -1,41 +1,47 @@
 {
-    "name": "enqueue/laravel-queue",
-    "type": "library",
-    "description": "Laravel Queue Extension. It uses Enqueue transports",
-    "keywords": ["messaging", "queue", "laravel"],
-    "license": "MIT",
-    "require": {
-        "php": ">=7.1",
-        "illuminate/queue": "^9.0|^10.0",
-        "queue-interop/amqp-interop": "^0.8",
-        "queue-interop/queue-interop": "^0.7|^0.8",
-        "enqueue/enqueue": "^0.10",
-        "enqueue/dsn": "^0.10"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "~5.5",
-        "enqueue/enqueue": "^0.10",
-        "enqueue/null": "^0.10@dev",
-        "enqueue/test": "^0.10@dev",
-        "enqueue/simple-client": "^0.10@dev"
-    },
-    "autoload": {
-        "psr-4": { "Enqueue\\LaravelQueue\\": "src/" },
-        "exclude-from-classmap": [
-            "/Tests/"
-        ]
-    },
-    "suggest": {
-        "enqueue/simple-client": "If you want to use enqueue client and cli commands"
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Enqueue\\LaravelQueue\\EnqueueServiceProvider"
-            ]
-        },
-        "branch-alias": {
-            "dev-master": "0.9.x-dev"
-        }
-    }
+	"name": "gopatchworks/core-laravel-queue",
+	"type": "library",
+	"description": "Laravel Queue Extension. It uses Enqueue transports",
+	"keywords": [
+		"messaging",
+		"queue",
+		"laravel"
+	],
+	"license": "MIT",
+	"require": {
+		"php": ">=7.1",
+		"illuminate/queue": "^10.0|^11.0",
+		"queue-interop/amqp-interop": "^0.8",
+		"queue-interop/queue-interop": "^0.7|^0.8",
+		"enqueue/enqueue": "^0.10",
+		"enqueue/dsn": "^0.10"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "~5.5",
+		"enqueue/enqueue": "^0.10",
+		"enqueue/null": "^0.10@dev",
+		"enqueue/test": "^0.10@dev",
+		"enqueue/simple-client": "^0.10@dev"
+	},
+	"autoload": {
+		"psr-4": {
+			"Enqueue\\LaravelQueue\\": "src/"
+		},
+		"exclude-from-classmap": [
+			"/Tests/"
+		]
+	},
+	"suggest": {
+		"enqueue/simple-client": "If you want to use enqueue client and cli commands"
+	},
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Enqueue\\LaravelQueue\\EnqueueServiceProvider"
+			]
+		},
+		"branch-alias": {
+			"dev-master": "0.9.x-dev"
+		}
+	}
 }
