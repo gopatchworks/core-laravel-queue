@@ -71,6 +71,7 @@ class AmqpQueue extends Queue
     {
         $interopQueue = $this->getQueue($queue);
         $interopQueue->addFlag(\Interop\Amqp\AmqpQueue::FLAG_DURABLE);
+		$interopQueue->setArgument('x-queue-type', 'quorum');
 
         $this->size = $this->getQueueInteropContext()->declareQueue($interopQueue);
     }
