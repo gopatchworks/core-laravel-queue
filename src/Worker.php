@@ -16,6 +16,7 @@ use Enqueue\Consumption\QueueConsumer;
 use Enqueue\Consumption\Result;
 use Enqueue\Consumption\StartExtensionInterface;
 use Illuminate\Queue\WorkerOptions;
+use Illuminate\Support\Facades\Log;
 
 class Worker extends \Illuminate\Queue\Worker implements
     StartExtensionInterface,
@@ -62,8 +63,19 @@ class Worker extends \Illuminate\Queue\Worker implements
             $this->getAllExtensions([$this])
         ));
         foreach (explode(',', $queueNames) as $queueName) {
-            $queueConsumer->bindCallback($queueName, function() {
-                $this->runJob($this->job, $this->connectionName, $this->options);
+            $queueConsumer->bindCallback($queueName, function () {
+                try {
+                    $this->runJob($this->job, $this->connectionName, $this->options);
+                } catch (\Throwable $e) {
+                    Log::critical('[Worker] Unhandled exception during job execution.', [
+                        'job_id' => optional($this->job)->getJobId(),
+                        'job_class' => optional($this->job)->resolveName(),
+                        'exception' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+
+                    throw $e;
+                }
 
                 return Result::ALREADY_ACKNOWLEDGED;
             });
@@ -95,7 +107,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         ])));
 
         foreach (explode(',', $queueNames) as $queueName) {
-            $queueConsumer->bindCallback($queueName, function() {
+            $queueConsumer->bindCallback($queueName, function () {
                 $this->runJob($this->job, $this->connectionName, $this->options);
 
                 return Result::ALREADY_ACKNOWLEDGED;
@@ -107,6 +119,11 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     public function onStart(Start $context): void
     {
+        Log::info('[Worker] Starting daemon.', [
+            'connection' => $this->connectionName,
+            'queues' => $this->queueNames,
+        ]);
+
         if ($this->supportsAsyncSignals()) {
             $this->listenForSignals();
         }
@@ -120,11 +137,13 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     public function onPreConsume(PreConsume $context): void
     {
-        if (! $this->daemonShouldRun($this->options, $this->connectionName, $this->queueNames)) {
+        if (!$this->daemonShouldRun($this->options, $this->connectionName, $this->queueNames)) {
+            Log::info('[Worker] Pausing worker.', ['options' => $this->options]);
             $this->pauseWorker($this->options, $this->lastRestart);
         }
 
         if ($this->stopped) {
+            Log::info('[Worker] Execution interrupted due to stop signal.');
             $context->interruptExecution();
         }
     }
@@ -136,6 +155,11 @@ class Worker extends \Illuminate\Queue\Worker implements
             $context->getConsumer()
         );
 
+        Log::info('[Worker] Received new job.', [
+            'job_id' => $this->job->getJobId(),
+            'job_class' => $this->job->resolveName(),
+        ]);
+
         if ($this->supportsAsyncSignals()) {
             $this->registerTimeoutHandler($this->job, $this->options);
         }
@@ -143,6 +167,11 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     public function onPostMessageReceived(PostMessageReceived $context): void
     {
+        Log::info('[Worker] Finished processing job.', [
+            'job_id' => $this->job->getJobId(),
+            'job_class' => $this->job->resolveName(),
+        ]);
+
         $this->stopIfNecessary($this->options, $this->lastRestart, $this->job);
 
         if ($this->stopped) {
@@ -152,6 +181,11 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     public function onResult(MessageResult $context): void
     {
+        Log::info('[Worker] Job result processed.', [
+            'job_id' => $context->getMessage()->getMessageId(),
+            'result' => $context->getResult(),
+        ]);
+
         if ($this->supportsAsyncSignals()) {
             $this->resetTimeoutHandler();
         }
@@ -160,6 +194,7 @@ class Worker extends \Illuminate\Queue\Worker implements
     public function stop($status = 0, $options = null)
     {
         if ($this->interop) {
+            Log::info('[Worker] Received stop signal. Worker will exit after the current job.');
             $this->stopped = true;
 
             return;
