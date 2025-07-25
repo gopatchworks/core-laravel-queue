@@ -8,6 +8,7 @@ use Interop\Queue\Consumer;
 use Interop\Queue\Context;
 use Interop\Amqp\Impl\AmqpMessage;
 use Interop\Queue\Message;
+use Illuminate\Support\Facades\Log;
 
 class Queue extends BaseQueue implements QueueContract
 {
@@ -59,14 +60,19 @@ class Queue extends BaseQueue implements QueueContract
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
+        $targetQueue = $this->getQueue($queue);
         $message = $this->context->createMessage($payload);
 
         if ($message instanceof AmqpMessage) {
             $message->setDeliveryMode(\Interop\Amqp\AmqpMessage::DELIVERY_MODE_PERSISTENT);
         }
 
+        Log::debug('[Queue] Pushing new job.', [
+            'queue' => $targetQueue->getQueueName()
+        ]);
+
         return $this->context->createProducer()->send(
-            $this->getQueue($queue),
+            $targetQueue,
             $message
         );
     }
@@ -90,13 +96,21 @@ class Queue extends BaseQueue implements QueueContract
     public function pop($queue = null)
     {
         $queue = $this->getQueue($queue);
-
         $consumer = $this->context->createConsumer($queue);
+
         if ($message = $consumer->receive(1000)) { // 1 sec
+            Log::info('[Queue] Popped a message from queue.', [
+                'queue' => $queue->getQueueName(),
+                'message_id' => $message->getMessageId(),
+            ]);
             return $this->convertMessageToJob($message, $consumer);
         }
+
+        Log::debug('[Queue] No message found on queue.', [
+            'queue' => $queue->getQueueName()
+        ]);
     }
-    
+
     public function convertMessageToJob(Message $message, Consumer $consumer): Job
     {
         return new Job(
