@@ -1,4 +1,5 @@
 <?php
+
 namespace Enqueue\LaravelQueue;
 
 use Enqueue\Consumption\ChainExtension;
@@ -15,6 +16,9 @@ use Enqueue\Consumption\PreConsumeExtensionInterface;
 use Enqueue\Consumption\QueueConsumer;
 use Enqueue\Consumption\Result;
 use Enqueue\Consumption\StartExtensionInterface;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Queue\Factory as QueueManager;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Log;
 
@@ -43,8 +47,36 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     protected $extensions = [];
 
+    public function __construct(
+        QueueManager $manager,
+        Dispatcher $events,
+        ExceptionHandler $exceptions,
+        callable $isDownForMaintenance,
+        ?callable $resetScope = null,
+    ) {
+        parent::__construct($manager, $events, $exceptions, $isDownForMaintenance, $resetScope);
+
+        Log::withContext(['unique_worker_key' => mt_rand(1_000_000, 99_999_999)]);
+    }
+
     public function daemon($connectionName, $queueNames, WorkerOptions $options)
     {
+        Log::info('[Worker] Daemon started.', [
+            'options' => [
+                'name' => $options->name,
+                'backoff' => $options->backoff,
+                'sleep' => $options->sleep,
+                'rest' => $options->rest,
+                'force' => $options->force,
+                'memory' => $options->memory,
+                'timeout' => $options->timeout,
+                'maxTries' => $options->maxTries,
+                'stopWhenEmpty' => $options->stopWhenEmpty,
+                'maxJobs' => $options->maxJobs,
+                'maxTime' => $options->maxTime,
+            ]
+        ]);
+
         $this->connectionName = $connectionName;
         $this->queueNames = $queueNames;
         $this->options = $options;
@@ -54,6 +86,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         $this->interop = $this->queue instanceof Queue;
 
         if (false == $this->interop) {
+            Log::info('[Worker] Parent Daemon started.');
             parent::daemon($connectionName, $this->queueNames, $options);
             return;
         }
@@ -77,6 +110,7 @@ class Worker extends \Illuminate\Queue\Worker implements
                     throw $e;
                 }
 
+                Log::debug('[Worker] ran callback.');
                 return Result::ALREADY_ACKNOWLEDGED;
             });
         }
@@ -86,6 +120,8 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     public function runNextJob($connectionName, $queueNames, WorkerOptions $options)
     {
+        Log::debug('[Worker] Run next job.');
+
         $this->connectionName = $connectionName;
         $this->queueNames = $queueNames;
         $this->options = $options;
@@ -95,6 +131,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         $this->interop = $this->queue instanceof Queue;
 
         if (false == $this->interop) {
+            Log::info('[Worker] Parent Run next job.');
             parent::runNextJob($connectionName, $this->queueNames, $options);
             return;
         }
@@ -106,10 +143,12 @@ class Worker extends \Illuminate\Queue\Worker implements
             new LimitConsumedMessagesExtension(1),
         ])));
 
+        Log::debug('[Worker] create new queue consumer with 1 message limit');
         foreach (explode(',', $queueNames) as $queueName) {
             $queueConsumer->bindCallback($queueName, function () {
                 $this->runJob($this->job, $this->connectionName, $this->options);
 
+                Log::debug('[Worker] ran next callback.');
                 return Result::ALREADY_ACKNOWLEDGED;
             });
         }

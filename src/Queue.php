@@ -37,6 +37,7 @@ class Queue extends BaseQueue implements QueueContract
         $this->context = $amqpContext;
         $this->queueName = $queueName;
         $this->timeToRun = $timeToRun;
+        Log::withContext(['rabbit_queue_name' => $queueName]);
     }
 
     /**

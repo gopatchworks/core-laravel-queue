@@ -35,6 +35,8 @@ class Job extends BaseJob implements JobContract
         $this->consumer = $consumer;
         $this->message = $message;
         $this->connectionName = $connectionName;
+
+        Log::withContext(['unique_job_key' => mt_rand(1_000_000,99_999_999)]);
     }
 
     public function getJobId()
@@ -50,8 +52,9 @@ class Job extends BaseJob implements JobContract
         parent::delete();
 
         try {
-            Log::debug('[Job] Acknowledging message.', ['job_id' => $this->getJobId()]);
+            Log::debug('[Job] Acknowledging message.');
             $this->consumer->acknowledge($this->message);
+            Log::debug('[Job] Message acknowledged.');
         } catch (\Throwable $e) {
             Log::critical('[Job] Failed to acknowledge message.', [
                 'job_id' => $this->getJobId(),
@@ -67,7 +70,9 @@ class Job extends BaseJob implements JobContract
      */
     public function release($delay = 0)
     {
+        Log::debug('[Job] Releasing job.');
         parent::release($delay);
+        Log::debug('[Job] Job released.');
 
         try {
             $requeueMessage = clone $this->message;
@@ -80,15 +85,13 @@ class Job extends BaseJob implements JobContract
             } catch (DeliveryDelayNotSupportedException $e) {
             }
 
-            Log::debug('[Job] Releasing job by acknowledging old message and sending new one.', [
-                'job_id' => $this->getJobId()
-            ]);
+            Log::debug('[Job] Releasing job by acknowledging old message and sending new one.');
 
             $this->consumer->acknowledge($this->message);
             $producer->send($this->consumer->getQueue(), $requeueMessage);
 
         } catch (\Throwable $e) {
-            Log::critical('[Job] Failed to release job. Potential for lost job.', [
+            Log::debug('[Job] Failed to release job. Potential for lost job.', [
                 'job_id' => $this->getJobId(),
                 'exception' => $e->getMessage(),
             ]);
