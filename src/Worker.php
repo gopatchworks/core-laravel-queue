@@ -182,7 +182,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         }
 
         if ($this->stopped) {
-            Log::info('[Worker] Execution interrupted due to stop signal.');
+            Log::info('[Worker] Execution interrupted due to stop signal 185.');
             $context->interruptExecution();
         }
     }
@@ -206,16 +206,21 @@ class Worker extends \Illuminate\Queue\Worker implements
 
     public function onPostMessageReceived(PostMessageReceived $context): void
     {
-        Log::info('[Worker] Finished processing job.', [
+        Log::info('[Worker] Finished processing job, checking for stop.', [
             'job_id' => $this->job->getJobId(),
             'job_class' => $this->job->resolveName(),
         ]);
 
         $this->stopIfNecessary($this->options, $this->lastRestart, $this->job);
 
+        Log::info('[Worker] Finished processing job, not stopping.');
+
         if ($this->stopped) {
+            Log::info('[Worker] Execution interrupted due to stop signal on 217.');
             $context->interruptExecution();
         }
+
+        Log::info('[Worker] Finished processing job, not stopped.');
     }
 
     public function onResult(MessageResult $context): void
