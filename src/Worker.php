@@ -134,6 +134,8 @@ class Worker extends \Illuminate\Queue\Worker implements
             Log::info('[Worker] Parent Run next job.');
             parent::runNextJob($connectionName, $this->queueNames, $options);
             return;
+        } else {
+            Log::info('[Worker] Interop Run next job:.' . get_class($this->queue));
         }
 
         $context = $this->queue->getQueueInteropContext();
