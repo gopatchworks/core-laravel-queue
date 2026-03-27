@@ -26,20 +26,25 @@ class EnqueueServiceProviderTest extends TestCase
 
     public function testShouldAddEnqueueServiceProviderOnBootCall()
     {
+        $registeredConnectors = [];
+
         $queueManagerMock = $this->createMock(QueueManager::class);
         $queueManagerMock
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('addConnector')
-            ->with('enqueue', $this->isInstanceOf(\Closure::class))
-            ->willReturnCallback(function ($name, \Closure $closure) {
-                $this->assertInstanceOf(Connector::class, call_user_func($closure));
+            ->willReturnCallback(function ($name, \Closure $closure) use (&$registeredConnectors) {
+                $registeredConnectors[$name] = call_user_func($closure);
             });
 
         $container = new Container();
         $container['queue'] = $queueManagerMock;
 
         $provider = new EnqueueServiceProvider($container);
-
         $provider->boot();
+
+        $this->assertArrayHasKey('interop', $registeredConnectors);
+        $this->assertArrayHasKey('amqp_interop', $registeredConnectors);
+        $this->assertInstanceOf(Connector::class, $registeredConnectors['interop']);
+        $this->assertInstanceOf(Connector::class, $registeredConnectors['amqp_interop']);
     }
 }

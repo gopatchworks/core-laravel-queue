@@ -4,16 +4,34 @@ namespace Enqueue\LaravelQueue\Tests;
 
 use Enqueue\LaravelQueue\Connector;
 use Enqueue\LaravelQueue\Queue;
-use Enqueue\Null\NullConnectionFactory;
 use Enqueue\Null\NullContext;
 use Enqueue\Test\ClassExtensionTrait;
+use Illuminate\Container\Container;
 use Illuminate\Queue\Connectors\ConnectorInterface;
+use Illuminate\Support\Facades\Facade;
 use Interop\Queue\Queue as InteropQueue;
 use PHPUnit\Framework\TestCase;
 
 class ConnectorTest extends TestCase
 {
     use ClassExtensionTrait;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $app = new Container();
+        $app->instance('log', new class {
+            public function __call($name, $args) { return $this; }
+        });
+        Facade::setFacadeApplication($app);
+    }
+
+    protected function tearDown(): void
+    {
+        Facade::clearResolvedInstances();
+        Facade::setFacadeApplication(null);
+        parent::tearDown();
+    }
 
     public function testShouldImplementConnectorInterface()
     {
@@ -25,43 +43,12 @@ class ConnectorTest extends TestCase
         new Connector();
     }
 
-    public function testThrowIfConnectorFactoryClassOptionNotSet()
-    {
-        $connector = new Connector();
-
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('The "connection_factory_class" option is required');
-        $connector->connect([]);
-    }
-
-    public function testThrowIfConnectorFactoryClassOptionIsNotValidClass()
-    {
-        $connector = new Connector();
-
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('The "connection_factory_class" option "invalidClass" is not a class');
-        $connector->connect([
-            'connection_factory_class' => 'invalidClass',
-        ]);
-    }
-
-    public function testThrowIfConnectorFactoryClassOptionDoesNotImplementConnectionFactoryInterface()
-    {
-        $connector = new Connector();
-
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('The "connection_factory_class" option must contain a class that implements "Interop\Queue\PsrConnectionFactory" but it is not');
-        $connector->connect([
-            'connection_factory_class' => \stdClass::class,
-        ]);
-    }
-
     public function testShouldReturnQueueOnConnectMethodCall()
     {
         $connector = new Connector();
 
         $this->assertInstanceOf(Queue::class, $connector->connect([
-            'connection_factory_class' => NullConnectionFactory::class,
+            'dsn' => 'null://',
         ]));
     }
 
@@ -69,7 +56,7 @@ class ConnectorTest extends TestCase
     {
         $connector = new Connector();
 
-        $queue = $connector->connect(['connection_factory_class' => NullConnectionFactory::class]);
+        $queue = $connector->connect(['dsn' => 'null://']);
 
         $this->assertInstanceOf(NullContext::class, $queue->getQueueInteropContext());
 
@@ -84,7 +71,7 @@ class ConnectorTest extends TestCase
         $connector = new Connector();
 
         $queue = $connector->connect([
-            'connection_factory_class' => NullConnectionFactory::class,
+            'dsn' => 'null://',
             'queue' => 'theCustomQueue',
             'time_to_run' => 123,
         ]);

@@ -4,3 +4,4 @@ composer.phar
 phpunit.xml
 vendor/
 .idea/
+.phpunit.result.cache
