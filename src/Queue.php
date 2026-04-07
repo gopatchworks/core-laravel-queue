@@ -53,7 +53,7 @@ class Queue extends BaseQueue implements QueueContract
      */
     public function push($job, $data = '', $queue = null)
     {
-        return $this->pushRaw($this->createPayload($job, $data), $queue);
+        return $this->pushRaw($this->createPayload($job, $this->queueName, $data), $queue);
     }
 
     /**
@@ -83,7 +83,7 @@ class Queue extends BaseQueue implements QueueContract
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        $message = $this->context->createMessage($this->createPayload($job, $data));
+        $message = $this->context->createMessage($this->createPayload($job, $this->queueName, $data));
 
         if ($message instanceof AmqpMessage) {
             $message->setDeliveryMode(\Interop\Amqp\AmqpMessage::DELIVERY_MODE_PERSISTENT);

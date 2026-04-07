@@ -12,16 +12,33 @@ use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Queue as BaseQueue;
+use Illuminate\Support\Facades\Facade;
 use Interop\Queue\Consumer as InteropConsumer;
 use Interop\Queue\Context as InteropContext;
 use Interop\Queue\Message as InteropMessage;
 use Interop\Queue\Producer as InteropProducer;
 use Interop\Queue\Queue as InteropQueue;
 use PHPUnit\Framework\TestCase;
-
 class QueueTest extends TestCase
 {
     use ClassExtensionTrait;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $app = new Container();
+        $app->instance('log', new class {
+            public function __call($name, $args) { return $this; }
+        });
+        Facade::setFacadeApplication($app);
+    }
+
+    protected function tearDown(): void
+    {
+        Facade::clearResolvedInstances();
+        Facade::setFacadeApplication(null);
+        parent::tearDown();
+    }
 
     public function testShouldImplementsQueueContract()
     {
@@ -101,7 +118,7 @@ class QueueTest extends TestCase
             ->willReturnCallback(function (InteropQueue $queue, InteropMessage $message) {
                 $this->assertSame('theCustomQueueName', $queue->getQueueName());
 
-                $this->assertContains('"displayName":"Enqueue\\\LaravelQueue\\\Tests\\\TestJob"', $message->getBody());
+                $this->assertStringContainsString('"displayName":"Enqueue\\\LaravelQueue\\\Tests\\\TestJob"', $message->getBody());
                 $this->assertSame([], $message->getProperties());
                 $this->assertSame([], $message->getHeaders());
             })
