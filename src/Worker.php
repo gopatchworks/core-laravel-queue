@@ -239,7 +239,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         }
     }
 
-    public function stop($status = 0, $options = null)
+    public function stop($status = 0, $options = null, $reason = null)
     {
         if ($this->interop) {
             Log::info('[Worker] Received stop signal. Worker will exit after the current job.');
@@ -248,7 +248,7 @@ class Worker extends \Illuminate\Queue\Worker implements
             return;
         }
 
-        parent::stop($status, $options);
+        parent::stop($status, $options, $reason);
     }
 
     public function setExtensions(array $extensions): self
