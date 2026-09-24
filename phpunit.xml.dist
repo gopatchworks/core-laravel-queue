@@ -10,7 +10,7 @@
 
     <testsuites>
         <testsuite name="Message Queue Bundle Test Suite">
-            <directory>./Tests</directory>
+            <directory>./src/Tests</directory>
         </testsuite>
     </testsuites>
 
