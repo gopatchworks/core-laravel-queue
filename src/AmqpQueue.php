@@ -15,6 +15,11 @@ class AmqpQueue extends Queue
     protected $size = 0;
 
     /**
+     * @var array<string, true>
+     */
+    protected $declaredQueues = [];
+
+    /**
      * {@inheritdoc}
      *
      * @param AmqpContext $amqpContext
@@ -39,7 +44,7 @@ class AmqpQueue extends Queue
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $this->declareQueue($queue);
+        $this->declareQueueOnce($queue);
 
         parent::pushRaw($payload, $queue, $options);
     }
@@ -49,7 +54,7 @@ class AmqpQueue extends Queue
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        $this->declareQueue($queue);
+        $this->declareQueueOnce($queue);
 
         return parent::later($delay, $job, $data, $queue);
     }
@@ -62,6 +67,24 @@ class AmqpQueue extends Queue
         $this->declareQueue($queue);
 
         return parent::pop($queue);
+    }
+
+    /**
+     * A declare blocks on a broker round trip, and queues are durable, so once per process is enough.
+     * Gotcha: a queue deleted while this process runs is not re-created, and publishes to it are dropped.
+     *
+     * @param string|null $queue
+     */
+    protected function declareQueueOnce($queue = null)
+    {
+        $name = $this->getQueue($queue)->getQueueName();
+
+        if (isset($this->declaredQueues[$name])) {
+            return;
+        }
+
+        $this->declareQueue($queue);
+        $this->declaredQueues[$name] = true;
     }
 
     /**
