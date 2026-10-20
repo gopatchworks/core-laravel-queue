@@ -51,6 +51,38 @@ class Queue extends BaseQueue implements QueueContract
     /**
      * {@inheritdoc}
      */
+    public function pendingSize($queue = null)
+    {
+        return $this->size($queue);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delayedSize($queue = null)
+    {
+        return 0;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function reservedSize($queue = null)
+    {
+        return 0;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function creationTimeOfOldestPendingJob($queue = null)
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function push($job, $data = '', $queue = null)
     {
         return $this->pushRaw($this->createPayload($job, $this->queueName, $data), $queue);
