@@ -204,7 +204,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         ]);
 
         if ($this->supportsAsyncSignals()) {
-            $this->registerTimeoutHandler($this->job, $this->options);
+            $this->registerTimeoutHandler($this->connectionName, $this->job->getQueue(), $this->job, $this->options);
         }
     }
 
@@ -215,7 +215,7 @@ class Worker extends \Illuminate\Queue\Worker implements
             'job_class' => $this->job->resolveName(),
         ]);
 
-        $this->stopIfNecessary($this->options, $this->lastRestart, $this->job);
+        $this->stopIfNecessary($this->options, $this->lastRestart, 0, $this->job);
 
         Log::info('[Worker] Finished processing job, not stopping.');
 
@@ -239,7 +239,7 @@ class Worker extends \Illuminate\Queue\Worker implements
         }
     }
 
-    public function stop($status = 0, $options = null, $reason = null)
+    public function stop($status = 0, $options = null, $reason = null, $connectionName = null, $queue = null)
     {
         if ($this->interop) {
             Log::info('[Worker] Received stop signal. Worker will exit after the current job.');
@@ -248,7 +248,7 @@ class Worker extends \Illuminate\Queue\Worker implements
             return;
         }
 
-        parent::stop($status, $options, $reason);
+        parent::stop($status, $options, $reason, $connectionName, $queue);
     }
 
     public function setExtensions(array $extensions): self
